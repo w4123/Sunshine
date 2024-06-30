@@ -88,6 +88,7 @@ namespace video {
       CBR,  ///< Some encoders don't support CBR, if not supported attempt constant quantization parameter instead.
       DYNAMIC_RANGE,  ///< HDR support.
       VUI_PARAMETERS,  ///< AMD encoder with VAAPI doesn't add VUI parameters to SPS.
+      NALU_PREFIX_5b,
       MAX_FLAGS  ///< Maximum number of flags.
     };
 
@@ -102,6 +103,7 @@ namespace video {
         _CONVERT(CBR);
         _CONVERT(DYNAMIC_RANGE);
         _CONVERT(VUI_PARAMETERS);
+        _CONVERT(NALU_PREFIX_5b);
         _CONVERT(MAX_FLAGS);
       }
 #undef _CONVERT
