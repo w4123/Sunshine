@@ -2234,8 +2234,8 @@ namespace video {
   }
 
   enum validate_flag_e {
-    VUI_PARAMS = 0x01,
-    NALU_PREFIX_5b = 0x02,
+    VUI_PARAMS = 0x01,  ///< AMD encoder with VAAPI doesn't add VUI parameters to SPS.
+    NALU_PREFIX_5b = 0x02,  ///< NALU fix required.
   };
 
   int
