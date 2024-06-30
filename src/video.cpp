@@ -1712,7 +1712,7 @@ namespace video {
 
     if (!video_format[encoder_t::NALU_PREFIX_5b]) {
       auto nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
-      
+
       session->replacements.emplace_back(nalu_prefix.substr(1), nalu_prefix);
     }
 
@@ -2290,9 +2290,11 @@ namespace video {
     }
 
     auto nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
-    std::string_view payload { (char *) av_packet->data, (std::size_t) av_packet->size };
-    if (std::search(std::begin(payload), std::end(payload), std::begin(nalu_prefix), std::end(nalu_prefix)) != std::end(payload)) {
-      flag |= NALU_PREFIX_5b;
+    if (auto packet_avcodec = dynamic_cast<packet_raw_avcodec *>(packet.get())) {
+      std::string_view payload { (char *) packet_avcodec->av_packet->data, (std::size_t) packet_avcodec->av_packet->size };
+      if (std::search(std::begin(payload), std::end(payload), std::begin(nalu_prefix), std::end(nalu_prefix)) != std::end(payload)) {
+        flag |= NALU_PREFIX_5b;
+      }
     }
 
     return flag;
