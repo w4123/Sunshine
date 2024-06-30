@@ -35,6 +35,9 @@ extern "C" {
 using namespace std::literals;
 namespace video {
 
+  constexpr auto hevc_nalu = "\000\000\000\001("sv;
+  constexpr auto h264_nalu = "\000\000\000\001e"sv;
+
   void
   free_ctx(AVCodecContext *ctx) {
     avcodec_free_context(&ctx);
@@ -1707,6 +1710,12 @@ namespace video {
       // 0 ==> don't inject, 1 ==> inject for h264, 2 ==> inject for hevc
       config.videoFormat <= 1 ? (1 - (int) video_format[encoder_t::VUI_PARAMETERS]) * (1 + config.videoFormat) : 0);
 
+    if (!video_format[encoder_t::NALU_PREFIX_5b]) {
+      auto nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
+      
+      session->replacements.emplace_back(nalu_prefix.substr(1), nalu_prefix);
+    }
+
     return session;
   }
 
@@ -2225,7 +2234,8 @@ namespace video {
   }
 
   enum validate_flag_e {
-    VUI_PARAMS = 0x01,  ///< VUI parameters
+    VUI_PARAMS = 0x01,
+    NALU_PREFIX_5b = 0x02,
   };
 
   int
@@ -2277,6 +2287,12 @@ namespace video {
         // Don't check it for non-avcodec encoders.
         flag |= VUI_PARAMS;
       }
+    }
+
+    auto nalu_prefix = config.videoFormat ? hevc_nalu : h264_nalu;
+    std::string_view payload { (char *) av_packet->data, (std::size_t) av_packet->size };
+    if (std::search(std::begin(payload), std::end(payload), std::begin(nalu_prefix), std::end(nalu_prefix)) != std::end(payload)) {
+      flag |= NALU_PREFIX_5b;
     }
 
     return flag;
@@ -2334,6 +2350,7 @@ namespace video {
 
     std::vector<std::pair<validate_flag_e, encoder_t::flag_e>> packet_deficiencies {
       { VUI_PARAMS, encoder_t::VUI_PARAMETERS },
+      { NALU_PREFIX_5b, encoder_t::NALU_PREFIX_5b },
     };
 
     for (auto [validate_flag, encoder_flag] : packet_deficiencies) {
@@ -2458,6 +2475,13 @@ namespace video {
     }
     if (encoder.hevc[encoder_t::PASSED] && !encoder.hevc[encoder_t::VUI_PARAMETERS]) {
       BOOST_LOG(warning) << encoder.name << ": hevc missing sps->vui parameters"sv;
+    }
+
+    if (!encoder.h264[encoder_t::NALU_PREFIX_5b]) {
+      BOOST_LOG(warning) << encoder.name << ": h264: replacing nalu prefix data"sv;
+    }
+    if (encoder.hevc[encoder_t::PASSED] && !encoder.hevc[encoder_t::NALU_PREFIX_5b]) {
+      BOOST_LOG(warning) << encoder.name << ": hevc: replacing nalu prefix data"sv;
     }
 
     fg.disable();
